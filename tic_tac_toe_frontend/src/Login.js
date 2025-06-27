@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { login as apiLogin } from "./api";
 
 // PUBLIC_INTERFACE
 export default function Login({ onLogin }) {
@@ -15,16 +16,7 @@ export default function Login({ onLogin }) {
     setLoading(true);
     setErr("");
     try {
-      const res = await fetch("http://localhost:3001/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || "Login failed");
-      }
-      const data = await res.json();
+      const data = await apiLogin(nickname);
       onLogin(data);
     } catch (ex) {
       setErr(ex.message || "Login failed");

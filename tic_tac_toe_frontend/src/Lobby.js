@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createGame, joinGame } from "./api";
 
 // PUBLIC_INTERFACE
 export default function Lobby({ session, onCreate, onJoin }) {
@@ -15,16 +16,7 @@ export default function Lobby({ session, onCreate, onJoin }) {
   const handleCreate = async () => {
     setLoading(true); setErr("");
     try {
-      const res = await fetch("http://localhost:3001/game", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: session.session_id })
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || "Create failed");
-      }
-      const data = await res.json();
+      const data = await createGame(session.session_id);
       onCreate(data);
     } catch (e) {
       setErr(e.message || "Create failed");
@@ -38,16 +30,7 @@ export default function Lobby({ session, onCreate, onJoin }) {
     if (!gameId.trim()) return setErr("Enter game id.");
     setLoading(true); setErr("");
     try {
-      const res = await fetch(`http://localhost:3001/game/${gameId}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: session.session_id })
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.detail || "Join failed");
-      }
-      const data = await res.json();
+      const data = await joinGame(gameId.trim(), session.session_id);
       onJoin(data);
     } catch (e) {
       setErr(e.message || "Join failed");
@@ -77,7 +60,7 @@ export default function Lobby({ session, onCreate, onJoin }) {
           style={{flex: 1, padding: 10, borderRadius: 8, border: "1px solid #ccc", fontSize: 16}}
         />
         <button type="submit" className="theme-toggle" disabled={loading || !gameId.trim()}>
-          {loading ? "Joining..." : "Join"}
+          {loading && !err ? "Joining..." : "Join"}
         </button>
       </form>
       <div>

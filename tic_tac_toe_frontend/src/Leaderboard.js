@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { fetchLeaderboard } from "./api";
 
 // PUBLIC_INTERFACE
 export default function Leaderboard({ visible = true }) {
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
-    fetch("http://localhost:3001/leaderboard")
-      .then(r => r.json())
-      .then(d => setItems(d.leaderboard || []))
-      .catch(e => setErr("Could not fetch leaderboard"))
+    setErr("");
+    fetchLeaderboard()
+      .then((d) => setItems(d.leaderboard || []))
+      .catch(() => setErr("Could not fetch leaderboard"))
       .finally(() => setLoading(false));
   }, [visible]);
 

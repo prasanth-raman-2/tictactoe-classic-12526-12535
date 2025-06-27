@@ -6,6 +6,10 @@ import Board from "./Board";
 import StatusBar from "./StatusBar";
 import Leaderboard from "./Leaderboard";
 import { AppProvider, useAppContext } from "./AppContext";
+import {
+  fetchGameStatus,
+  submitMove,
+} from "./api";
 
 // PUBLIC_INTERFACE
 function App() {
@@ -39,6 +43,7 @@ function MainContent() {
   const { session, setSession, game, setGame } = useAppContext();
   // local view state: "login" | "lobby" | "game"
   const [screen, setScreen] = useState("login");
+  const [pollError, setPollError] = useState("");
 
   // On login
   function handleLogin(sess) {
@@ -59,12 +64,15 @@ function MainContent() {
   // Poll game status every 2s if in game/in_progress, refresh only if in game
   useEffect(() => {
     let timer;
+    setPollError("");
     if (screen === "game" && game?.game_id && game.status !== "finished") {
-      timer = setInterval(() => {
-        fetch(`http://localhost:3001/game/${game.game_id}/status`)
-          .then((r) => r.json())
-          .then(setGame)
-          .catch(() => {}); // tolerate errors (e.g. if ended)
+      timer = setInterval(async () => {
+        try {
+          const nGame = await fetchGameStatus(game.game_id);
+          setGame(nGame);
+        } catch {
+          setPollError("Lost connection to server.");
+        }
       }, 2000);
     }
     return () => timer && clearInterval(timer);
@@ -74,23 +82,15 @@ function MainContent() {
   async function handleMove(x, y) {
     if (!game || !session) return;
     try {
-      const res = await fetch(
-        `http://localhost:3001/game/${game.game_id}/move`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: session.session_id, x, y }),
-        }
+      const updated = await submitMove(
+        game.game_id,
+        session.session_id,
+        x,
+        y
       );
-      if (!res.ok) {
-        const d = await res.json();
-        alert(d.detail || "Invalid move");
-        return;
-      }
-      const updated = await res.json();
       setGame(updated);
     } catch (e) {
-      alert("Move failed.");
+      alert(e.message || "Move failed.");
     }
   }
 
@@ -121,6 +121,11 @@ function MainContent() {
           <div style={{marginTop: 30}}>
             <button className="theme-toggle" onClick={handleExitGame}>Back to Lobby</button>
           </div>
+          {pollError && (
+            <div style={{ color: "red", marginTop: 12 }}>
+              Connection error: {pollError}
+            </div>
+          )}
         </div>
         <Leaderboard visible={true} />
       </div>
